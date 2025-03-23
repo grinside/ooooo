@@ -40,7 +40,7 @@ const AudioChat = () => {
       <h2>Appel vocal pair à pair</h2>
       <p>Mon ID : <strong>{myId}</strong></p>
       <input
-        placeholder="ID du correspondant"
+        placeholder="ID du coarrespondant"
         value={remotePeerId}
         onChange={(e) => setRemotePeerId(e.target.value)}
       />
