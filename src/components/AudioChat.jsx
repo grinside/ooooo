@@ -36,22 +36,16 @@ const AudioChat = () => {
   };
 
   return (
-    <div className="p-8 bg-white shadow-md rounded-lg">
-      <h1 className="text-xl font-bold mb-4">00000 - Appel Vocal P2P</h1>
-      <p className="mb-2">Mon ID : <strong>{myId}</strong></p>
+    <div>
+      <h2>Appel vocal pair à pair</h2>
+      <p>Mon ID : <strong>{myId}</strong></p>
       <input
-        className="border p-2 rounded w-full mb-2"
         placeholder="ID du correspondant"
         value={remotePeerId}
         onChange={(e) => setRemotePeerId(e.target.value)}
       />
-      <button
-        onClick={callPeer}
-        className="bg-blue-500 text-white w-full p-2 rounded"
-      >
-        Appeler
-      </button>
-      <audio ref={myAudio} autoPlay muted className="hidden" />
+      <button onClick={callPeer}>Appeler</button>
+      <audio ref={myAudio} autoPlay muted />
       <audio ref={remoteAudio} autoPlay />
     </div>
   );

@@ -1,5 +1,5 @@
 {
-  "name": "00000-p2p",
+  "name": "00000-p2p-ui",
   "version": "1.0.0",
   "scripts": {
     "dev": "vite",
