@@ -31,7 +31,6 @@ const AudioChat = () => {
   const callPeer = () => {
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
       myAudio.current.srcObject = stream;
-
       const call = peerInstance.current.call(remotePeerId, stream);
       call.on('stream', (remoteStream) => {
         remoteAudio.current.srcObject = remoteStream;
@@ -58,8 +57,8 @@ const AudioChat = () => {
         Appeler
       </button>
 
-      <audio ref={myAudio} autoPlay muted className="hidden"></audio>
-      <audio ref={remoteAudio} autoPlay></audio>
+      <audio ref={myAudio} autoPlay muted className="hidden" />
+      <audio ref={remoteAudio} autoPlay />
     </div>
   );
 };
