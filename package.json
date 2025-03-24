@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "main.jsx",
   "scripts": {
-    "dev": "vite",  // <-- Ajoute cette ligne
+    "dev": "vite", 
     "start": "vite",
     "build": "vite build",
     "serve": "vite preview"
