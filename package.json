@@ -1,8 +1,9 @@
 {
-  "name": "p2p-social-app",
+  "name": "p2p-oooooo-app",
   "version": "1.0.0",
   "main": "main.jsx",
   "scripts": {
+    "dev": "vite",  // <-- Ajoute cette ligne
     "start": "vite",
     "build": "vite build",
     "serve": "vite preview"
@@ -12,6 +13,7 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "vite": "^4.0.0"
+    "vite": "^4.0.0",
+    "@vitejs/plugin-react": "^4.0.0"
   }
 }
