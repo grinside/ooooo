@@ -8,7 +8,11 @@ function ChatOverview({ user, setActiveChat }) {
       {user.friends.map(id => {
         const friend = users.find(u => u.id === id);
         return (
-          <div key={friend.id} onClick={() => setActiveChat(friend)}>
+          <div 
+            key={friend.id} 
+            className="chat-overview"
+            onClick={() => setActiveChat(friend)}
+          >
             Conversation avec {friend.id}
           </div>
         );

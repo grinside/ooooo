@@ -8,7 +8,11 @@ function UserCircle({ user, setActiveChat }) {
     <div>
       <h2>Amis directs :</h2>
       {directFriends.map(friend => (
-        <div key={friend.id} onClick={() => setActiveChat(friend)}>
+        <div 
+          key={friend.id} 
+          className="friend"
+          onClick={() => setActiveChat(friend)}
+        >
           {friend.id}
         </div>
       ))}
