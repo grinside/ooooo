@@ -1,0 +1,187 @@
+# Alert rules for Max IT TV Affiliation System API
+groups:
+  - name: api_alerts
+    interval: 30s
+    rules:
+      # High error rate alert
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_request_duration_ms_count{status=~"5.."}[5m]))
+            /
+            sum(rate(http_request_duration_ms_count[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "High API error rate detected"
+          description: "API error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # High response time alert
+      - alert: HighResponseTime
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_ms_bucket[5m])) by (le, route)
+          ) > 2000
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "High API response time detected"
+          description: "95th percentile response time for {{ $labels.route }} is {{ $value }}ms (threshold: 2000ms)"
+
+      # API service down alert
+      - alert: APIServiceDown
+        expr: up{job="api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "API service is down"
+          description: "API service has been down for more than 1 minute"
+
+      # High memory usage alert
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            nodejs_heap_size_used_bytes{job="api"}
+            /
+            nodejs_heap_size_total_bytes{job="api"}
+          ) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value | humanizePercentage }} (threshold: 90%)"
+
+      # Database connection pool exhaustion
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          (
+            pg_pool_waiting_count{job="api"}
+            /
+            pg_pool_size{job="api"}
+          ) > 0.80
+        for: 2m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "Database connection pool near exhaustion"
+          description: "{{ $value | humanizePercentage }} of database connections are in use (threshold: 80%)"
+
+      # Queue processing lag
+      - alert: QueueProcessingLag
+        expr: queue_waiting_count{job="api"} > 100
+        for: 10m
+        labels:
+          severity: warning
+          service: worker
+        annotations:
+          summary: "High queue lag detected"
+          description: "{{ $value }} jobs waiting in queue for more than 10 minutes"
+
+      # Failed job rate
+      - alert: HighFailedJobRate
+        expr: |
+          (
+            rate(queue_failed_total{job="api"}[10m])
+            /
+            rate(queue_completed_total{job="api"}[10m])
+          ) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+          service: worker
+        annotations:
+          summary: "High job failure rate detected"
+          description: "Job failure rate is {{ $value | humanizePercentage }} (threshold: 10%)"
+
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # Database connection failures
+      - alert: DatabaseConnectionFailure
+        expr: increase(db_connection_errors_total{job="api"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "Database connection failures detected"
+          description: "{{ $value }} database connection failures in the last 5 minutes"
+
+      # Slow database queries
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(db_query_duration_ms_bucket{job="api"}[5m])) by (le)
+          ) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile query time is {{ $value }}ms (threshold: 1000ms)"
+
+  - name: redis_alerts
+    interval: 30s
+    rules:
+      # Redis connection failures
+      - alert: RedisConnectionFailure
+        expr: increase(redis_connection_errors_total{job="api"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis connection failures detected"
+          description: "{{ $value }} Redis connection failures in the last 5 minutes"
+
+  - name: business_alerts
+    interval: 1m
+    rules:
+      # Payment failure rate
+      - alert: HighPaymentFailureRate
+        expr: |
+          (
+            rate(payment_failed_total{job="api"}[15m])
+            /
+            rate(payment_attempts_total{job="api"}[15m])
+          ) > 0.20
+        for: 15m
+        labels:
+          severity: warning
+          service: payment
+        annotations:
+          summary: "High payment failure rate"
+          description: "Payment failure rate is {{ $value | humanizePercentage }} (threshold: 20%)"
+
+      # Commission calculation failures
+      - alert: CommissionCalculationFailures
+        expr: increase(commission_calculation_errors_total{job="api"}[1h]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: commission
+        annotations:
+          summary: "Commission calculation failures detected"
+          description: "{{ $value }} commission calculation errors in the last hour"
+
+      # Payout processing failures
+      - alert: PayoutProcessingFailures
+        expr: increase(payout_failed_total{job="api"}[1h]) > 5
+        for: 5m
+        labels:
+          severity: critical
+          service: payout
+        annotations:
+          summary: "Payout processing failures detected"
+          description: "{{ $value }} payout failures in the last hour"

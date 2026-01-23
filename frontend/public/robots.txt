@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /affiliate/dashboard/
+
+Sitemap: https://maxittv.com/sitemap.xml
