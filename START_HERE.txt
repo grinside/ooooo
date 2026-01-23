@@ -1,0 +1,84 @@
+
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║     🚀 MAX IT TV AFFILIATION - LANCEMENT RAPIDE 🚀          ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+
+📍 ÉTAPE 1 : Ouvrir un terminal
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ouvrez votre terminal et tapez :
+
+    cd /home/user/ooooo
+    ./launch.sh
+
+
+📍 ÉTAPE 2 : Attendez 10 secondes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Le script va automatiquement :
+✓ Démarrer le backend (API)
+✓ Démarrer le frontend (React)
+✓ Afficher les URLs d'accès
+
+
+📍 ÉTAPE 3 : Ouvrir votre navigateur
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Allez sur : http://localhost:5173
+
+
+╔══════════════════════════════════════════════════════════════╗
+║                     ✨ INTERFACES ✨                         ║
+╚══════════════════════════════════════════════════════════════╝
+
+🌐 Frontend Principal
+   → http://localhost:5173
+
+👤 Inscription Affilié
+   → http://localhost:5173/affiliate/register
+
+🔐 Login Affilié
+   → http://localhost:5173/affiliate/login
+
+⚙️  Admin (Email: admin@maxittv.com / Password: Admin@123)
+   → http://localhost:5173/admin/login
+
+
+╔══════════════════════════════════════════════════════════════╗
+║                   🛑 POUR ARRÊTER 🛑                        ║
+╚══════════════════════════════════════════════════════════════╝
+
+Dans le terminal où tourne l'app, tapez :
+
+    Ctrl + C
+
+
+╔══════════════════════════════════════════════════════════════╗
+║                   📚 DOCUMENTATION 📚                        ║
+╚══════════════════════════════════════════════════════════════╝
+
+📖 Guide complet    : README.md
+🚀 Guide lancement  : LANCER.md
+📊 Vue d'ensemble   : PROJECT_SUMMARY.md
+
+
+╔══════════════════════════════════════════════════════════════╗
+║                    ⚠️  IMPORTANT ⚠️                         ║
+╚══════════════════════════════════════════════════════════════╝
+
+En mode développement (sans Docker) :
+- Les paiements sont SIMULÉS (pas de vraies transactions)
+- Les SMS sont affichés dans la console (pas envoyés)
+- Certaines fonctionnalités nécessitent PostgreSQL
+
+Pour une installation complète avec base de données :
+→ Voir LANCER.md section "Base de données"
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                      Bon développement ! 🎉
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
