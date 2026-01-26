@@ -1,0 +1,446 @@
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: maxittv-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-maxittv}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Database password required}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    networks:
+      - maxittv-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-maxittv}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c max_connections=200
+      -c work_mem=4MB
+      -c maintenance_work_mem=64MB
+      -c effective_cache_size=1GB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+
+  # Redis Cache & Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: maxittv-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - maxittv-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # Backend API Service
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: ${NODE_ENV:-production}
+    container_name: maxittv-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      HOST: 0.0.0.0
+
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-maxittv}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_POOL_MIN: ${DB_POOL_MIN:-2}
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: 0
+
+      # Queue Redis (same Redis, different DB)
+      QUEUE_REDIS_HOST: redis
+      QUEUE_REDIS_PORT: 6379
+      QUEUE_REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      QUEUE_REDIS_DB: 1
+
+      # JWT & Security
+      JWT_SECRET: ${JWT_SECRET}
+      SESSION_SECRET: ${SESSION_SECRET}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+
+      # URLs
+      API_URL: ${API_URL:-http://localhost/api}
+      APP_URL: ${APP_URL:-http://localhost}
+
+      # CORS
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:3000}
+      TRUST_PROXY: "true"
+
+      # Rate Limiting
+      RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-900000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+
+      # Payment Providers
+      ORANGE_MONEY_API_KEY: ${ORANGE_MONEY_API_KEY:-}
+      ORANGE_MONEY_API_SECRET: ${ORANGE_MONEY_API_SECRET:-}
+      ORANGE_MONEY_MERCHANT_ID: ${ORANGE_MONEY_MERCHANT_ID:-}
+      WAVE_API_KEY: ${WAVE_API_KEY:-}
+      WAVE_SECRET_KEY: ${WAVE_SECRET_KEY:-}
+      MTN_MOMO_API_KEY: ${MTN_MOMO_API_KEY:-}
+      MTN_MOMO_API_SECRET: ${MTN_MOMO_API_SECRET:-}
+      MTN_MOMO_USER_ID: ${MTN_MOMO_USER_ID:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+
+      # SMS Providers
+      ORANGE_SMS_API_KEY: ${ORANGE_SMS_API_KEY:-}
+      ORANGE_SMS_API_SECRET: ${ORANGE_SMS_API_SECRET:-}
+      ORANGE_SMS_SENDER_ID: ${ORANGE_SMS_SENDER_ID:-MaxITTV}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
+
+      # Commission Settings
+      COMMISSION_DIRECT_RATE: ${COMMISSION_DIRECT_RATE:-0.10}
+      COMMISSION_LEVEL2_RATE: ${COMMISSION_LEVEL2_RATE:-0.05}
+      COMMISSION_LEVEL3_RATE: ${COMMISSION_LEVEL3_RATE:-0.03}
+      MINIMUM_PAYOUT: ${MINIMUM_PAYOUT:-10000}
+      PAYOUT_DAY: ${PAYOUT_DAY:-1}
+
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ELASTICSEARCH_NODE: ${ELASTICSEARCH_NODE:-}
+
+      # Monitoring
+      MONITORING_ENABLED: ${MONITORING_ENABLED:-true}
+
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/logs:/app/logs
+    networks:
+      - maxittv-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.maxittv.service=api"
+      - "com.maxittv.version=1.0.0"
+
+  # Background Worker Service
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: ${NODE_ENV:-production}
+    container_name: maxittv-worker
+    restart: unless-stopped
+    command: ["node", "src/worker.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-maxittv}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+
+      # Queue Redis
+      QUEUE_REDIS_HOST: redis
+      QUEUE_REDIS_PORT: 6379
+      QUEUE_REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      QUEUE_REDIS_DB: 1
+
+      # Worker Settings
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-5}
+
+      # Payment & SMS (same as API)
+      ORANGE_MONEY_API_KEY: ${ORANGE_MONEY_API_KEY:-}
+      ORANGE_MONEY_API_SECRET: ${ORANGE_MONEY_API_SECRET:-}
+      WAVE_API_KEY: ${WAVE_API_KEY:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ELASTICSEARCH_NODE: ${ELASTICSEARCH_NODE:-}
+
+    volumes:
+      - ./backend/logs:/app/logs
+    networks:
+      - maxittv-network
+    labels:
+      - "com.maxittv.service=worker"
+      - "com.maxittv.version=1.0.0"
+
+  # Scheduler Service (Cron Jobs)
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: ${NODE_ENV:-production}
+    container_name: maxittv-scheduler
+    restart: unless-stopped
+    command: ["node", "src/scheduler.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-maxittv}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+
+      # Queue Redis
+      QUEUE_REDIS_HOST: redis
+      QUEUE_REDIS_PORT: 6379
+      QUEUE_REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      QUEUE_REDIS_DB: 1
+
+      # Commission Settings
+      PAYOUT_DAY: ${PAYOUT_DAY:-1}
+      MINIMUM_PAYOUT: ${MINIMUM_PAYOUT:-10000}
+
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ELASTICSEARCH_NODE: ${ELASTICSEARCH_NODE:-}
+
+    volumes:
+      - ./backend/logs:/app/logs
+    networks:
+      - maxittv-network
+    labels:
+      - "com.maxittv.service=scheduler"
+      - "com.maxittv.version=1.0.0"
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: maxittv-nginx
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - ./backend/uploads:/usr/share/nginx/html/uploads:ro
+      - nginx_cache:/var/cache/nginx
+      - nginx_logs:/var/log/nginx
+      # SSL certificates (mount your SSL certs here in production)
+      # - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - maxittv-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.maxittv.service=nginx"
+      - "com.maxittv.version=1.0.0"
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: maxittv-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/alerts:/etc/prometheus/alerts:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    networks:
+      - maxittv-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "com.maxittv.service=prometheus"
+
+  # Grafana Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: maxittv-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3001}
+      GF_INSTALL_PLUGINS: ${GRAFANA_INSTALL_PLUGINS:-}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    networks:
+      - maxittv-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "com.maxittv.service=grafana"
+
+  # Elasticsearch (Optional - for centralized logging)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: maxittv-elasticsearch
+    restart: unless-stopped
+    profiles:
+      - monitoring
+      - full
+    environment:
+      - discovery.type=single-node
+      - cluster.name=maxittv-logs
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    networks:
+      - maxittv-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    labels:
+      - "com.maxittv.service=elasticsearch"
+
+# Networks
+networks:
+  maxittv-network:
+    driver: bridge
+    name: maxittv-network
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# Volumes
+volumes:
+  postgres_data:
+    driver: local
+    name: maxittv-postgres-data
+  redis_data:
+    driver: local
+    name: maxittv-redis-data
+  prometheus_data:
+    driver: local
+    name: maxittv-prometheus-data
+  grafana_data:
+    driver: local
+    name: maxittv-grafana-data
+  elasticsearch_data:
+    driver: local
+    name: maxittv-elasticsearch-data
+  nginx_cache:
+    driver: local
+    name: maxittv-nginx-cache
+  nginx_logs:
+    driver: local
+    name: maxittv-nginx-logs

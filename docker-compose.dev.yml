@@ -1,0 +1,79 @@
+# Development-specific Docker Compose configuration
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: builder
+    command: ["npm", "run", "dev"]
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+    volumes:
+      - ./backend/src:/app/src:ro
+      - ./backend/package.json:/app/package.json:ro
+    ports:
+      - "3000:3000"
+
+  worker:
+    command: ["npm", "run", "dev"]
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+    volumes:
+      - ./backend/src:/app/src:ro
+
+  scheduler:
+    command: ["npm", "run", "dev"]
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+    volumes:
+      - ./backend/src:/app/src:ro
+
+  postgres:
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: maxittv_dev
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  # Database admin tool for development
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: maxittv-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@maxittv.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    networks:
+      - maxittv-network
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+  # Redis admin tool for development
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: maxittv-redis-commander
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    networks:
+      - maxittv-network
+
+volumes:
+  pgadmin_data:
+    driver: local
+    name: maxittv-pgadmin-data
