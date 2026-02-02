@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Maze - Creepypasta Escape</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            min-height: 100vh;
+        }
+
+        #menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a0a0a 0%, #0a0a1a 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        #menu.hidden {
+            display: none;
+        }
+
+        .title {
+            font-size: 2.5em;
+            color: #ff3333;
+            text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+            margin-bottom: 10px;
+            animation: flicker 3s infinite;
+            text-align: center;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            color: #888;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+            92% { opacity: 1; }
+            94% { opacity: 0.3; }
+            96% { opacity: 1; }
+        }
+
+        .menu-section {
+            background: rgba(20, 20, 30, 0.9);
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            margin: 10px;
+            width: 90%;
+            max-width: 450px;
+        }
+
+        .menu-section h2 {
+            color: #ff6666;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 5px;
+            font-family: inherit;
+            font-size: 1em;
+        }
+
+        input {
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #ff6666;
+        }
+
+        button {
+            background: linear-gradient(135deg, #ff3333, #cc0000);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+
+        button:disabled {
+            background: #444;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #333, #222);
+        }
+
+        #cameraPreview {
+            width: 180px;
+            height: 135px;
+            background: #111;
+            border-radius: 10px;
+            margin: 10px auto;
+            display: block;
+            border: 2px solid #333;
+            transform: scaleX(-1);
+        }
+
+        #gameContainer {
+            display: none;
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #minimap {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 120px;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #ff3333;
+            border-radius: 5px;
+        }
+
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            font-size: 0.9em;
+        }
+
+        #playerList {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            max-width: 180px;
+        }
+
+        .player-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+            font-size: 0.85em;
+        }
+
+        .player-face {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid #ff6666;
+            object-fit: cover;
+        }
+
+        #roomInfo {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 16px;
+            border-radius: 5px;
+            border: 1px solid #ff3333;
+            font-size: 0.9em;
+        }
+
+        #chat {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 220px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 5px;
+            border: 1px solid #333;
+        }
+
+        #chatMessages {
+            height: 120px;
+            overflow-y: auto;
+            padding: 8px;
+            font-size: 0.75em;
+        }
+
+        #chatInput {
+            width: 100%;
+            padding: 8px;
+            background: #222;
+            border: none;
+            border-top: 1px solid #333;
+            color: #fff;
+            font-size: 0.85em;
+        }
+
+        .warning {
+            color: #ff6666;
+            font-size: 0.85em;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        #loadingOverlay.hidden {
+            display: none;
+        }
+
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #333;
+            border-top-color: #ff3333;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #gameOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1500;
+        }
+
+        #gameOverlay.show {
+            display: flex;
+        }
+
+        .jumpscare {
+            animation: jumpscare 0.5s ease-out;
+        }
+
+        @keyframes jumpscare {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.5); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 5px;
+        }
+
+        @media (max-width: 768px) {
+            #controls {
+                display: flex;
+            }
+            #chat {
+                display: none;
+            }
+        }
+
+        .control-btn {
+            width: 55px;
+            height: 55px;
+            background: rgba(255, 51, 51, 0.4);
+            border: 2px solid #ff3333;
+            border-radius: 10px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .control-btn:active {
+            background: rgba(255, 51, 51, 0.7);
+        }
+
+        .rules-list {
+            font-size: 0.85em;
+            line-height: 1.7;
+            padding-left: 20px;
+            color: #ccc;
+        }
+
+        #monsterWarning {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.3);
+            padding: 20px 40px;
+            border-radius: 10px;
+            border: 2px solid #ff0000;
+            font-size: 1.5em;
+            color: #ff0000;
+            animation: pulse 0.5s infinite;
+            display: none;
+            z-index: 100;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.7; transform: translate(-50%, -50%) scale(1.05); }
+        }
+
+        #jumpscareContainer {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #jumpscareContainer.show {
+            display: flex;
+        }
+
+        #jumpscareMonster {
+            width: 80vmin;
+            height: 80vmin;
+            animation: jumpscareAnim 0.3s ease-out;
+        }
+
+        @keyframes jumpscareAnim {
+            0% { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+            50% { transform: scale(1.3) rotate(5deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingOverlay">
+        <div class="loader"></div>
+        <p style="margin-top: 20px;">Chargement...</p>
+        <p id="loadingStatus" style="color: #888; font-size: 0.9em; margin-top: 10px;"></p>
+    </div>
+
+    <div id="menu">
+        <h1 class="title">FACE MAZE</h1>
+        <p class="subtitle">Creepypasta Escape - Multijoueur</p>
+
+        <div class="menu-section">
+            <h2>Configuration Camera</h2>
+            <video id="cameraPreview" autoplay playsinline muted></video>
+            <button id="enableCameraBtn">Activer la Camera</button>
+            <p class="warning" id="cameraStatus">Camera requise pour jouer</p>
+        </div>
+
+        <div class="menu-section">
+            <h2>Ton Pseudo</h2>
+            <input type="text" id="playerName" placeholder="Entre ton pseudo..." maxlength="12">
+        </div>
+
+        <div class="menu-section">
+            <h2>Rejoindre ou Creer</h2>
+            <button id="createRoomBtn" disabled>Creer une Partie</button>
+            <div style="text-align: center; margin: 10px 0; color: #666;">- ou -</div>
+            <input type="text" id="roomCodeInput" placeholder="Code de la room..." style="text-transform: uppercase;">
+            <button id="joinRoomBtn" class="btn-secondary" disabled>Rejoindre</button>
+        </div>
+
+        <div class="menu-section" style="background: rgba(255, 50, 50, 0.1);">
+            <h2>Regles du Jeu</h2>
+            <ul class="rules-list">
+                <li>Retrouve tes amis dans le labyrinthe</li>
+                <li>Echappe au monstre qui te traque</li>
+                <li>ZQSD ou fleches pour te deplacer</li>
+                <li>Le dernier survivant gagne !</li>
+                <li>Max 5 joueurs par partie</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <canvas id="minimap"></canvas>
+
+        <div id="hud">
+            <div>Survie: <span id="survivalTime">0:00</span></div>
+            <div>Joueurs: <span id="playerCount">0</span>/5</div>
+            <div>Elimines: <span id="deadCount">0</span></div>
+        </div>
+
+        <div id="roomInfo">
+            Code: <span id="roomCode">----</span>
+        </div>
+
+        <div id="monsterWarning">LE MONSTRE APPROCHE !</div>
+
+        <div id="playerList"></div>
+
+        <div id="chat">
+            <div id="chatMessages"></div>
+            <input type="text" id="chatInput" placeholder="Entree pour parler...">
+        </div>
+
+        <div id="controls">
+            <div class="control-row">
+                <button class="control-btn" data-dir="up">^</button>
+            </div>
+            <div class="control-row">
+                <button class="control-btn" data-dir="left">&lt;</button>
+                <button class="control-btn" data-dir="down">v</button>
+                <button class="control-btn" data-dir="right">&gt;</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="gameOverlay">
+        <h1 id="overlayTitle" style="color: #ff3333; font-size: 2.5em;"></h1>
+        <p id="overlayText" style="color: #888; margin: 15px 0; font-size: 1.1em;"></p>
+        <button id="returnMenuBtn" style="width: auto; padding: 15px 40px; margin-top: 20px;">Retour au Menu</button>
+    </div>
+
+    <div id="jumpscareContainer">
+        <canvas id="jumpscareMonster"></canvas>
+    </div>
+
+    <!-- PeerJS for P2P networking -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+    <script>
+        // ============================================
+        // FACE MAZE - CREEPYPASTA ESCAPE
+        // Multiplayer Horror Maze Game with Camera Face
+        // ============================================
+
+        const CONFIG = {
+            MAZE_WIDTH: 21,
+            MAZE_HEIGHT: 21,
+            CELL_SIZE: 64,
+            MAX_PLAYERS: 5,
+            MONSTER_SPEED: 1.8,
+            PLAYER_SPEED: 3.5,
+            FACE_UPDATE_INTERVAL: 200,
+            MONSTER_SPAWN_DELAY: 15000,
+            MONSTER_WARNING_DISTANCE: 250
+        };
+
+        // Game State
+        let gameState = {
+            isHost: false,
+            roomId: null,
+            playerId: null,
+            playerName: '',
+            players: new Map(),
+            maze: null,
+            monster: null,
+            camera: { x: 0, y: 0 },
+            gameStarted: false,
+            gameOver: false,
+            startTime: 0,
+            localPlayer: null
+        };
+
+        // Network
+        let peer = null;
+        let connections = new Map();
+
+        // Media
+        let videoStream = null;
+        let faceCanvas = null;
+        let faceCtx = null;
+        let lastFaceData = null;
+        let videoElement = null;
+
+        // Canvas
+        let canvas, ctx;
+        let minimapCanvas, minimapCtx;
+
+        // Face images cache
+        let faceImages = new Map();
+
+        // Audio
+        let audioContext = null;
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+
+        async function init() {
+            updateLoadingStatus('Initialisation...');
+
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            minimapCanvas = document.getElementById('minimap');
+            minimapCtx = minimapCanvas.getContext('2d');
+
+            faceCanvas = document.createElement('canvas');
+            faceCanvas.width = 100;
+            faceCanvas.height = 100;
+            faceCtx = faceCanvas.getContext('2d');
+
+            videoElement = document.getElementById('cameraPreview');
+
+            setupEventListeners();
+
+            // Try to init audio context
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            } catch(e) {
+                console.log('Audio not available');
+            }
+
+            hideLoading();
+        }
+
+        function updateLoadingStatus(text) {
+            document.getElementById('loadingStatus').textContent = text;
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+
+        function setupEventListeners() {
+            document.getElementById('enableCameraBtn').addEventListener('click', enableCamera);
+            document.getElementById('createRoomBtn').addEventListener('click', createRoom);
+            document.getElementById('joinRoomBtn').addEventListener('click', joinRoom);
+            document.getElementById('returnMenuBtn').addEventListener('click', returnToMenu);
+
+            document.getElementById('playerName').addEventListener('input', checkReadyState);
+            document.getElementById('roomCodeInput').addEventListener('input', (e) => {
+                e.target.value = e.target.value.toUpperCase();
+                checkReadyState();
+            });
+
+            document.getElementById('chatInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && e.target.value.trim()) {
+                    sendChatMessage(e.target.value.trim());
+                    e.target.value = '';
+                }
+            });
+
+            // Keyboard controls
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+
+            // Mobile controls
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                const handleStart = (e) => {
+                    e.preventDefault();
+                    keysPressed[btn.dataset.dir] = true;
+                };
+                const handleEnd = (e) => {
+                    e.preventDefault();
+                    keysPressed[btn.dataset.dir] = false;
+                };
+
+                btn.addEventListener('touchstart', handleStart);
+                btn.addEventListener('touchend', handleEnd);
+                btn.addEventListener('mousedown', handleStart);
+                btn.addEventListener('mouseup', handleEnd);
+                btn.addEventListener('mouseleave', handleEnd);
+            });
+
+            window.addEventListener('resize', resizeCanvas);
+
+            // Prevent context menu on mobile
+            document.addEventListener('contextmenu', e => e.preventDefault());
+        }
+
+        let keysPressed = { up: false, down: false, left: false, right: false };
+
+        function handleKeyDown(e) {
+            if (document.activeElement.tagName === 'INPUT') return;
+
+            switch(e.key.toLowerCase()) {
+                case 'z': case 'w': case 'arrowup':
+                    keysPressed.up = true; e.preventDefault(); break;
+                case 's': case 'arrowdown':
+                    keysPressed.down = true; e.preventDefault(); break;
+                case 'q': case 'a': case 'arrowleft':
+                    keysPressed.left = true; e.preventDefault(); break;
+                case 'd': case 'arrowright':
+                    keysPressed.right = true; e.preventDefault(); break;
+            }
+        }
+
+        function handleKeyUp(e) {
+            switch(e.key.toLowerCase()) {
+                case 'z': case 'w': case 'arrowup':
+                    keysPressed.up = false; break;
+                case 's': case 'arrowdown':
+                    keysPressed.down = false; break;
+                case 'q': case 'a': case 'arrowleft':
+                    keysPressed.left = false; break;
+                case 'd': case 'arrowright':
+                    keysPressed.right = false; break;
+            }
+        }
+
+        function checkReadyState() {
+            const hasCamera = videoStream !== null;
+            const hasName = document.getElementById('playerName').value.trim().length > 0;
+            const hasRoomCode = document.getElementById('roomCodeInput').value.trim().length >= 4;
+
+            document.getElementById('createRoomBtn').disabled = !hasCamera || !hasName;
+            document.getElementById('joinRoomBtn').disabled = !hasCamera || !hasName || !hasRoomCode;
+        }
+
+        // ============================================
+        // CAMERA & FACE CAPTURE
+        // ============================================
+
+        async function enableCamera() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 320 },
+                        height: { ideal: 240 },
+                        facingMode: 'user'
+                    }
+                });
+
+                videoElement.srcObject = videoStream;
+
+                document.getElementById('cameraStatus').textContent = 'Camera activee !';
+                document.getElementById('cameraStatus').style.color = '#66ff66';
+                document.getElementById('enableCameraBtn').textContent = 'Camera Active';
+                document.getElementById('enableCameraBtn').disabled = true;
+
+                checkReadyState();
+
+                // Start face capture loop
+                startFaceCapture();
+
+            } catch (error) {
+                console.error('Camera error:', error);
+                document.getElementById('cameraStatus').textContent = 'Erreur: ' + error.message;
+            }
+        }
+
+        function startFaceCapture() {
+            const captureFrame = () => {
+                if (videoElement.readyState >= 2) {
+                    captureFace();
+                }
+                requestAnimationFrame(captureFrame);
+            };
+            captureFrame();
+        }
+
+        function captureFace() {
+            const video = videoElement;
+            if (!video || video.videoWidth === 0) return;
+
+            // Calculate center square crop
+            const size = Math.min(video.videoWidth, video.videoHeight);
+            const offsetX = (video.videoWidth - size) / 2;
+            const offsetY = (video.videoHeight - size) / 2;
+
+            // Clear and draw circular mask
+            faceCtx.clearRect(0, 0, 100, 100);
+
+            // Create circular clip
+            faceCtx.save();
+            faceCtx.beginPath();
+            faceCtx.arc(50, 50, 48, 0, Math.PI * 2);
+            faceCtx.closePath();
+            faceCtx.clip();
+
+            // Draw video frame (mirrored)
+            faceCtx.translate(100, 0);
+            faceCtx.scale(-1, 1);
+            faceCtx.drawImage(
+                video,
+                offsetX, offsetY, size, size,
+                0, 0, 100, 100
+            );
+
+            faceCtx.restore();
+
+            // Add border
+            faceCtx.strokeStyle = '#ff6666';
+            faceCtx.lineWidth = 3;
+            faceCtx.beginPath();
+            faceCtx.arc(50, 50, 47, 0, Math.PI * 2);
+            faceCtx.stroke();
+
+            // Store as data URL (lower quality for network)
+            lastFaceData = faceCanvas.toDataURL('image/jpeg', 0.5);
+        }
+
+        // ============================================
+        // NETWORKING (PeerJS)
+        // ============================================
+
+        function generateRoomCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            for (let i = 0; i < 5; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        async function createRoom() {
+            gameState.playerName = document.getElementById('playerName').value.trim();
+            gameState.roomId = generateRoomCode();
+            gameState.isHost = true;
+            gameState.playerId = 'host';
+
+            document.getElementById('createRoomBtn').disabled = true;
+            document.getElementById('createRoomBtn').textContent = 'Connexion...';
+
+            peer = new Peer('facemaze-' + gameState.roomId, {
+                debug: 1
+            });
+
+            peer.on('open', (id) => {
+                console.log('Room created:', gameState.roomId);
+                initializeHostGame();
+            });
+
+            peer.on('connection', handleNewConnection);
+
+            peer.on('error', (err) => {
+                console.error('Peer error:', err);
+                document.getElementById('createRoomBtn').disabled = false;
+                document.getElementById('createRoomBtn').textContent = 'Creer une Partie';
+
+                if (err.type === 'unavailable-id') {
+                    alert('Ce code existe deja, reessaye !');
+                } else {
+                    alert('Erreur de connexion: ' + err.type);
+                }
+            });
+        }
+
+        async function joinRoom() {
+            gameState.playerName = document.getElementById('playerName').value.trim();
+            gameState.roomId = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+            gameState.isHost = false;
+            gameState.playerId = 'p-' + Math.random().toString(36).substr(2, 6);
+
+            document.getElementById('joinRoomBtn').disabled = true;
+            document.getElementById('joinRoomBtn').textContent = 'Connexion...';
+
+            peer = new Peer(gameState.playerId, { debug: 1 });
+
+            peer.on('open', () => {
+                console.log('Connecting to room:', gameState.roomId);
+
+                const conn = peer.connect('facemaze-' + gameState.roomId, {
+                    reliable: true
+                });
+
+                conn.on('open', () => {
+                    console.log('Connected to host');
+                    connections.set('host', conn);
+
+                    conn.send({
+                        type: 'join',
+                        playerId: gameState.playerId,
+                        playerName: gameState.playerName,
+                        faceData: lastFaceData
+                    });
+                });
+
+                conn.on('data', (data) => handleData(data, 'host'));
+
+                conn.on('close', () => {
+                    addChatMessage('Systeme', 'Deconnecte de la room');
+                    setTimeout(returnToMenu, 2000);
+                });
+
+                conn.on('error', (err) => {
+                    console.error('Connection error:', err);
+                });
+
+                // Timeout if can't connect
+                setTimeout(() => {
+                    if (!gameState.gameStarted) {
+                        alert('Impossible de rejoindre. Verifie le code.');
+                        returnToMenu();
+                    }
+                }, 10000);
+            });
+
+            peer.on('error', (err) => {
+                console.error('Peer error:', err);
+                document.getElementById('joinRoomBtn').disabled = false;
+                document.getElementById('joinRoomBtn').textContent = 'Rejoindre';
+                alert('Erreur: ' + err.type);
+            });
+        }
+
+        function handleNewConnection(conn) {
+            console.log('New connection:', conn.peer);
+
+            conn.on('open', () => {
+                connections.set(conn.peer, conn);
+            });
+
+            conn.on('data', (data) => handleData(data, conn.peer));
+
+            conn.on('close', () => {
+                handlePlayerDisconnect(conn.peer);
+            });
+        }
+
+        function handleData(data, fromPeer) {
+            switch(data.type) {
+                case 'join':
+                    if (gameState.isHost) {
+                        if (gameState.players.size >= CONFIG.MAX_PLAYERS) {
+                            connections.get(fromPeer)?.send({ type: 'full' });
+                            return;
+                        }
+
+                        const spawnPos = getRandomSpawnPosition();
+                        const newPlayer = {
+                            id: data.playerId,
+                            name: data.playerName,
+                            x: spawnPos.x,
+                            y: spawnPos.y,
+                            faceData: data.faceData,
+                            alive: true
+                        };
+
+                        gameState.players.set(data.playerId, newPlayer);
+                        loadFaceImage(data.playerId, data.faceData);
+
+                        // Send full game state
+                        connections.get(fromPeer)?.send({
+                            type: 'gameState',
+                            maze: gameState.maze,
+                            players: Array.from(gameState.players.entries()),
+                            monster: gameState.monster,
+                            startTime: gameState.startTime,
+                            yourId: data.playerId
+                        });
+
+                        // Broadcast to others
+                        broadcast({ type: 'playerJoined', player: newPlayer }, fromPeer);
+
+                        updatePlayerList();
+                        addChatMessage('Systeme', `${data.playerName} a rejoint !`);
+                    }
+                    break;
+
+                case 'gameState':
+                    gameState.maze = data.maze;
+                    gameState.monster = data.monster;
+                    gameState.startTime = data.startTime;
+
+                    for (const [id, player] of data.players) {
+                        gameState.players.set(id, player);
+                        loadFaceImage(id, player.faceData);
+                        if (id === gameState.playerId) {
+                            gameState.localPlayer = player;
+                        }
+                    }
+
+                    startGame();
+                    break;
+
+                case 'playerJoined':
+                    gameState.players.set(data.player.id, data.player);
+                    loadFaceImage(data.player.id, data.player.faceData);
+                    updatePlayerList();
+                    addChatMessage('Systeme', `${data.player.name} a rejoint !`);
+                    break;
+
+                case 'playerUpdate':
+                    if (gameState.players.has(data.playerId)) {
+                        const player = gameState.players.get(data.playerId);
+                        player.x = data.x;
+                        player.y = data.y;
+                        if (data.faceData) {
+                            player.faceData = data.faceData;
+                            loadFaceImage(data.playerId, data.faceData);
+                        }
+                    }
+
+                    // Host broadcasts to all others
+                    if (gameState.isHost) {
+                        broadcast(data, fromPeer);
+                    }
+                    break;
+
+                case 'monsterUpdate':
+                    if (!gameState.isHost) {
+                        gameState.monster = data.monster;
+                    }
+                    break;
+
+                case 'monsterSpawn':
+                    if (!gameState.isHost) {
+                        gameState.monster = data.monster;
+                        addChatMessage('ALERTE', 'LE MONSTRE EST APPARU !');
+                    }
+                    break;
+
+                case 'playerDeath':
+                    handlePlayerDeath(data.playerId, data.killedBy);
+                    break;
+
+                case 'chat':
+                    addChatMessage(data.playerName, data.message);
+                    break;
+
+                case 'full':
+                    alert('La room est pleine (5 max)');
+                    returnToMenu();
+                    break;
+
+                case 'playerDisconnect':
+                    handlePlayerDisconnect(data.playerId);
+                    break;
+            }
+        }
+
+        function broadcast(data, excludePeer = null) {
+            connections.forEach((conn, peerId) => {
+                if (peerId !== excludePeer && conn.open) {
+                    try {
+                        conn.send(data);
+                    } catch(e) {
+                        console.error('Broadcast error:', e);
+                    }
+                }
+            });
+        }
+
+        function sendToHost(data) {
+            const hostConn = connections.get('host');
+            if (hostConn && hostConn.open) {
+                try {
+                    hostConn.send(data);
+                } catch(e) {
+                    console.error('Send to host error:', e);
+                }
+            }
+        }
+
+        function handlePlayerDisconnect(playerId) {
+            const player = gameState.players.get(playerId);
+            if (player) {
+                addChatMessage('Systeme', `${player.name} a quitte`);
+                gameState.players.delete(playerId);
+                connections.delete(playerId);
+                faceImages.delete(playerId);
+                updatePlayerList();
+
+                if (gameState.isHost) {
+                    broadcast({ type: 'playerDisconnect', playerId });
+                }
+            }
+        }
+
+        // ============================================
+        // FACE IMAGE LOADING
+        // ============================================
+
+        function loadFaceImage(playerId, faceData) {
+            if (!faceData) return;
+
+            const img = new Image();
+            img.onload = () => {
+                faceImages.set(playerId, img);
+            };
+            img.src = faceData;
+        }
+
+        // ============================================
+        // MAZE GENERATION
+        // ============================================
+
+        function generateMaze(width, height) {
+            const maze = [];
+            for (let y = 0; y < height; y++) {
+                maze[y] = [];
+                for (let x = 0; x < width; x++) {
+                    maze[y][x] = 1;
+                }
+            }
+
+            function carve(x, y) {
+                maze[y][x] = 0;
+
+                const directions = [
+                    [0, -2], [0, 2], [-2, 0], [2, 0]
+                ].sort(() => Math.random() - 0.5);
+
+                for (const [dx, dy] of directions) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+
+                    if (nx > 0 && nx < width - 1 && ny > 0 && ny < height - 1 && maze[ny][nx] === 1) {
+                        maze[y + dy/2][x + dx/2] = 0;
+                        carve(nx, ny);
+                    }
+                }
+            }
+
+            carve(1, 1);
+
+            // Add extra passages
+            for (let i = 0; i < (width * height) / 15; i++) {
+                const x = Math.floor(Math.random() * (width - 2)) + 1;
+                const y = Math.floor(Math.random() * (height - 2)) + 1;
+                if (maze[y][x] === 1) {
+                    const neighbors = [
+                        maze[y-1]?.[x] === 0,
+                        maze[y+1]?.[x] === 0,
+                        maze[y]?.[x-1] === 0,
+                        maze[y]?.[x+1] === 0
+                    ].filter(Boolean).length;
+
+                    if (neighbors >= 2) {
+                        maze[y][x] = 0;
+                    }
+                }
+            }
+
+            return maze;
+        }
+
+        function getRandomSpawnPosition() {
+            const validPositions = [];
+            for (let y = 1; y < gameState.maze.length - 1; y++) {
+                for (let x = 1; x < gameState.maze[0].length - 1; x++) {
+                    if (gameState.maze[y][x] === 0) {
+                        validPositions.push({
+                            x: x * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE/2,
+                            y: y * CONFIG.CELL_SIZE + CONFIG.CELL_SIZE/2
+                        });
+                    }
+                }
+            }
+            return validPositions[Math.floor(Math.random() * validPositions.length)];
+        }
+
+        // ============================================
+        // GAME LOGIC
+        // ============================================
+
+        function initializeHostGame() {
+            gameState.maze = generateMaze(CONFIG.MAZE_WIDTH, CONFIG.MAZE_HEIGHT);
+            gameState.startTime = Date.now();
+
+            const spawnPos = getRandomSpawnPosition();
+            gameState.localPlayer = {
+                id: 'host',
+                name: gameState.playerName,
+                x: spawnPos.x,
+                y: spawnPos.y,
+                faceData: lastFaceData,
+                alive: true
+            };
+            gameState.players.set('host', gameState.localPlayer);
+            loadFaceImage('host', lastFaceData);
+
+            startGame();
+
+            // Spawn monster after delay
+            setTimeout(() => {
+                if (gameState.gameStarted && !gameState.gameOver) {
+                    spawnMonster();
+                }
+            }, CONFIG.MONSTER_SPAWN_DELAY);
+        }
+
+        function startGame() {
+            document.getElementById('menu').classList.add('hidden');
+            document.getElementById('gameContainer').style.display = 'block';
+            document.getElementById('roomCode').textContent = gameState.roomId;
+
+            resizeCanvas();
+            gameState.gameStarted = true;
+
+            updatePlayerList();
+            requestAnimationFrame(gameLoop);
+
+            // Start sending updates
+            setInterval(sendPlayerUpdate, 50);
+            setInterval(sendFaceUpdate, CONFIG.FACE_UPDATE_INTERVAL);
+
+            addChatMessage('Systeme', 'Partie commencee ! Trouve tes amis et fuis le monstre !');
+        }
+
+        function spawnMonster() {
+            let bestPos = null;
+            let bestDist = 0;
+
+            for (let i = 0; i < 30; i++) {
+                const pos = getRandomSpawnPosition();
+                let minDist = Infinity;
+
+                gameState.players.forEach(player => {
+                    if (player.alive) {
+                        const dist = Math.hypot(player.x - pos.x, player.y - pos.y);
+                        minDist = Math.min(minDist, dist);
+                    }
+                });
+
+                if (minDist > bestDist) {
+                    bestDist = minDist;
+                    bestPos = pos;
+                }
+            }
+
+            gameState.monster = {
+                x: bestPos.x,
+                y: bestPos.y,
+                speed: CONFIG.MONSTER_SPEED,
+                angle: 0
+            };
+
+            broadcast({ type: 'monsterSpawn', monster: gameState.monster });
+            addChatMessage('ALERTE', 'LE MONSTRE EST APPARU !');
+            playSound('spawn');
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        let lastTime = 0;
+        let lastUpdateTime = 0;
+
+        function gameLoop(timestamp) {
+            if (!gameState.gameStarted || gameState.gameOver) return;
+
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+
+            update(deltaTime);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update(deltaTime) {
+            if (!gameState.localPlayer || !gameState.localPlayer.alive) return;
+
+            // Movement
+            let dx = 0, dy = 0;
+            if (keysPressed.up) dy -= CONFIG.PLAYER_SPEED;
+            if (keysPressed.down) dy += CONFIG.PLAYER_SPEED;
+            if (keysPressed.left) dx -= CONFIG.PLAYER_SPEED;
+            if (keysPressed.right) dx += CONFIG.PLAYER_SPEED;
+
+            if (dx !== 0 && dy !== 0) {
+                dx *= 0.707;
+                dy *= 0.707;
+            }
+
+            const newX = gameState.localPlayer.x + dx;
+            const newY = gameState.localPlayer.y + dy;
+
+            if (!checkCollision(newX, gameState.localPlayer.y)) {
+                gameState.localPlayer.x = newX;
+            }
+            if (!checkCollision(gameState.localPlayer.x, newY)) {
+                gameState.localPlayer.y = newY;
+            }
+
+            // Camera follow
+            gameState.camera.x = gameState.localPlayer.x - canvas.width / 2;
+            gameState.camera.y = gameState.localPlayer.y - canvas.height / 2;
+
+            // Monster AI (host only)
+            if (gameState.isHost && gameState.monster) {
+                updateMonster();
+            }
+
+            // Check monster proximity warning
+            if (gameState.monster && gameState.localPlayer.alive) {
+                const dist = Math.hypot(
+                    gameState.monster.x - gameState.localPlayer.x,
+                    gameState.monster.y - gameState.localPlayer.y
+                );
+                document.getElementById('monsterWarning').style.display =
+                    dist < CONFIG.MONSTER_WARNING_DISTANCE ? 'block' : 'none';
+            }
+
+            updateHUD();
+        }
+
+        function checkCollision(x, y) {
+            const radius = 18;
+            const points = [
+                { x: x - radius, y: y - radius },
+                { x: x + radius, y: y - radius },
+                { x: x - radius, y: y + radius },
+                { x: x + radius, y: y + radius }
+            ];
+
+            for (const point of points) {
+                const cellX = Math.floor(point.x / CONFIG.CELL_SIZE);
+                const cellY = Math.floor(point.y / CONFIG.CELL_SIZE);
+
+                if (cellX < 0 || cellY < 0 ||
+                    cellY >= gameState.maze.length ||
+                    cellX >= gameState.maze[0].length ||
+                    gameState.maze[cellY][cellX] === 1) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function updateMonster() {
+            if (!gameState.monster) return;
+
+            // Find closest alive player
+            let closestPlayer = null;
+            let closestDist = Infinity;
+
+            gameState.players.forEach(player => {
+                if (player.alive) {
+                    const dist = Math.hypot(player.x - gameState.monster.x, player.y - gameState.monster.y);
+                    if (dist < closestDist) {
+                        closestDist = dist;
+                        closestPlayer = player;
+                    }
+                }
+            });
+
+            if (closestPlayer) {
+                const dx = closestPlayer.x - gameState.monster.x;
+                const dy = closestPlayer.y - gameState.monster.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist > 0) {
+                    gameState.monster.angle = Math.atan2(dy, dx);
+
+                    const speed = gameState.monster.speed;
+                    let moveX = (dx / dist) * speed;
+                    let moveY = (dy / dist) * speed;
+
+                    // Try direct movement
+                    const newX = gameState.monster.x + moveX;
+                    const newY = gameState.monster.y + moveY;
+
+                    let moved = false;
+
+                    if (!checkCollision(newX, gameState.monster.y)) {
+                        gameState.monster.x = newX;
+                        moved = true;
+                    }
+                    if (!checkCollision(gameState.monster.x, newY)) {
+                        gameState.monster.y = newY;
+                        moved = true;
+                    }
+
+                    // Wall sliding
+                    if (!moved) {
+                        if (!checkCollision(gameState.monster.x + speed, gameState.monster.y)) {
+                            gameState.monster.x += speed;
+                        } else if (!checkCollision(gameState.monster.x - speed, gameState.monster.y)) {
+                            gameState.monster.x -= speed;
+                        } else if (!checkCollision(gameState.monster.x, gameState.monster.y + speed)) {
+                            gameState.monster.y += speed;
+                        } else if (!checkCollision(gameState.monster.x, gameState.monster.y - speed)) {
+                            gameState.monster.y -= speed;
+                        }
+                    }
+                }
+
+                // Check kill
+                if (closestDist < 35) {
+                    killPlayer(closestPlayer.id);
+                }
+            }
+
+            // Broadcast position
+            broadcast({
+                type: 'monsterUpdate',
+                monster: gameState.monster
+            });
+        }
+
+        function killPlayer(playerId) {
+            const player = gameState.players.get(playerId);
+            if (player && player.alive) {
+                player.alive = false;
+
+                broadcast({
+                    type: 'playerDeath',
+                    playerId: playerId,
+                    killedBy: 'monster'
+                });
+
+                handlePlayerDeath(playerId, 'monster');
+            }
+        }
+
+        function handlePlayerDeath(playerId, killedBy) {
+            const player = gameState.players.get(playerId);
+            if (!player) return;
+
+            player.alive = false;
+            addChatMessage('MORT', `${player.name} a ete attrape !`);
+
+            if (playerId === gameState.playerId || playerId === 'host' && gameState.isHost) {
+                showJumpscare();
+            }
+
+            updatePlayerList();
+            checkWinCondition();
+        }
+
+        function checkWinCondition() {
+            const alivePlayers = Array.from(gameState.players.values()).filter(p => p.alive);
+
+            if (alivePlayers.length === 1 && gameState.players.size > 1) {
+                const myId = gameState.isHost ? 'host' : gameState.playerId;
+                if (alivePlayers[0].id === myId) {
+                    setTimeout(() => showGameOver(true, alivePlayers[0].name), 1000);
+                } else {
+                    setTimeout(() => showGameOver(false, alivePlayers[0].name), 1000);
+                }
+            } else if (alivePlayers.length === 0) {
+                setTimeout(() => showGameOver(false, null), 1000);
+            }
+        }
+
+        function showJumpscare() {
+            playSound('jumpscare');
+
+            const container = document.getElementById('jumpscareContainer');
+            const monsterCanvas = document.getElementById('jumpscareMonster');
+
+            monsterCanvas.width = 400;
+            monsterCanvas.height = 400;
+            const mctx = monsterCanvas.getContext('2d');
+
+            drawMonsterFace(mctx, 200, 200, 180);
+
+            container.classList.add('show');
+
+            setTimeout(() => {
+                container.classList.remove('show');
+                showGameOver(false, null);
+            }, 1500);
+        }
+
+        function drawMonsterFace(ctx, x, y, size) {
+            const time = Date.now() / 100;
+
+            // Dark face
+            ctx.fillStyle = '#0a0505';
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Creepy details
+            ctx.fillStyle = '#1a0a0a';
+            for (let i = 0; i < 20; i++) {
+                const angle = (i / 20) * Math.PI * 2;
+                const dist = size + Math.random() * 30;
+                ctx.beginPath();
+                ctx.arc(x + Math.cos(angle) * dist, y + Math.sin(angle) * dist, 10 + Math.random() * 15, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Glowing eyes
+            ctx.shadowColor = '#ff0000';
+            ctx.shadowBlur = 30;
+            ctx.fillStyle = '#ff0000';
+
+            ctx.beginPath();
+            ctx.arc(x - size * 0.3, y - size * 0.2, size * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(x + size * 0.3, y - size * 0.2, size * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pupils
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(x - size * 0.3, y - size * 0.2, size * 0.08, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.3, y - size * 0.2, size * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mouth
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 4;
+            ctx.shadowColor = '#ff0000';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.moveTo(x - size * 0.4, y + size * 0.3);
+            for (let i = 0; i <= 8; i++) {
+                const px = x - size * 0.4 + (i / 8) * size * 0.8;
+                const py = y + size * 0.3 + (i % 2 === 0 ? -15 : 15);
+                ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        function showGameOver(won, winnerName) {
+            gameState.gameOver = true;
+            const overlay = document.getElementById('gameOverlay');
+            const title = document.getElementById('overlayTitle');
+            const text = document.getElementById('overlayText');
+
+            if (won) {
+                title.textContent = 'VICTOIRE !';
+                title.style.color = '#66ff66';
+                text.textContent = 'Tu es le dernier survivant !';
+            } else {
+                title.textContent = 'GAME OVER';
+                title.style.color = '#ff3333';
+                if (winnerName) {
+                    text.textContent = `${winnerName} a survecu !`;
+                } else {
+                    text.textContent = 'Personne n\'a survecu...';
+                }
+            }
+
+            overlay.classList.add('show');
+        }
+
+        function returnToMenu() {
+            if (peer) {
+                peer.destroy();
+                peer = null;
+            }
+            connections.clear();
+            faceImages.clear();
+
+            gameState = {
+                isHost: false,
+                roomId: null,
+                playerId: null,
+                playerName: document.getElementById('playerName').value,
+                players: new Map(),
+                maze: null,
+                monster: null,
+                camera: { x: 0, y: 0 },
+                gameStarted: false,
+                gameOver: false,
+                startTime: 0,
+                localPlayer: null
+            };
+
+            document.getElementById('gameOverlay').classList.remove('show');
+            document.getElementById('jumpscareContainer').classList.remove('show');
+            document.getElementById('gameContainer').style.display = 'none';
+            document.getElementById('menu').classList.remove('hidden');
+            document.getElementById('chatMessages').innerHTML = '';
+            document.getElementById('monsterWarning').style.display = 'none';
+
+            document.getElementById('createRoomBtn').disabled = false;
+            document.getElementById('createRoomBtn').textContent = 'Creer une Partie';
+            document.getElementById('joinRoomBtn').textContent = 'Rejoindre';
+
+            checkReadyState();
+        }
+
+        // ============================================
+        // RENDERING
+        // ============================================
+
+        function render() {
+            ctx.fillStyle = '#050508';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (!gameState.maze) return;
+
+            // Calculate visible area
+            const startX = Math.max(0, Math.floor(gameState.camera.x / CONFIG.CELL_SIZE) - 1);
+            const startY = Math.max(0, Math.floor(gameState.camera.y / CONFIG.CELL_SIZE) - 1);
+            const endX = Math.min(gameState.maze[0].length, startX + Math.ceil(canvas.width / CONFIG.CELL_SIZE) + 3);
+            const endY = Math.min(gameState.maze.length, startY + Math.ceil(canvas.height / CONFIG.CELL_SIZE) + 3);
+
+            // Draw maze
+            for (let y = startY; y < endY; y++) {
+                for (let x = startX; x < endX; x++) {
+                    const screenX = x * CONFIG.CELL_SIZE - gameState.camera.x;
+                    const screenY = y * CONFIG.CELL_SIZE - gameState.camera.y;
+
+                    if (gameState.maze[y][x] === 1) {
+                        // Wall with gradient
+                        const gradient = ctx.createLinearGradient(screenX, screenY, screenX + CONFIG.CELL_SIZE, screenY + CONFIG.CELL_SIZE);
+                        gradient.addColorStop(0, '#1a1a2a');
+                        gradient.addColorStop(1, '#12121f');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(screenX, screenY, CONFIG.CELL_SIZE, CONFIG.CELL_SIZE);
+
+                        // Wall border
+                        ctx.strokeStyle = '#252535';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(screenX + 1, screenY + 1, CONFIG.CELL_SIZE - 2, CONFIG.CELL_SIZE - 2);
+                    } else {
+                        // Floor
+                        ctx.fillStyle = '#0a0a12';
+                        ctx.fillRect(screenX, screenY, CONFIG.CELL_SIZE, CONFIG.CELL_SIZE);
+
+                        // Floor detail
+                        ctx.fillStyle = '#0d0d15';
+                        ctx.fillRect(screenX + CONFIG.CELL_SIZE/2 - 1, screenY + CONFIG.CELL_SIZE/2 - 1, 2, 2);
+                    }
+                }
+            }
+
+            // Draw other players
+            gameState.players.forEach((player, id) => {
+                const myId = gameState.isHost ? 'host' : gameState.playerId;
+                if (id !== myId) {
+                    drawPlayer(player, false);
+                }
+            });
+
+            // Draw local player
+            if (gameState.localPlayer) {
+                drawPlayer(gameState.localPlayer, true);
+            }
+
+            // Draw monster
+            if (gameState.monster) {
+                drawMonster();
+            }
+
+            // Fog of war
+            if (gameState.localPlayer) {
+                const gradient = ctx.createRadialGradient(
+                    canvas.width/2, canvas.height/2, 80,
+                    canvas.width/2, canvas.height/2, 350
+                );
+                gradient.addColorStop(0, 'rgba(0,0,0,0)');
+                gradient.addColorStop(0.6, 'rgba(0,0,0,0.3)');
+                gradient.addColorStop(1, 'rgba(0,0,0,0.85)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // Minimap
+            drawMinimap();
+        }
+
+        function drawPlayer(player, isLocal) {
+            if (!player.alive && !isLocal) return;
+
+            const screenX = player.x - gameState.camera.x;
+            const screenY = player.y - gameState.camera.y;
+
+            if (screenX < -80 || screenX > canvas.width + 80 ||
+                screenY < -80 || screenY > canvas.height + 80) {
+                return;
+            }
+
+            const size = 44;
+
+            // Body shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.beginPath();
+            ctx.ellipse(screenX, screenY + 25, 18, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Body
+            ctx.fillStyle = player.alive ? '#3a3a5a' : '#2a2a3a';
+            ctx.beginPath();
+            ctx.ellipse(screenX, screenY + 12, 16, 20, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Face circle background
+            ctx.fillStyle = '#222';
+            ctx.beginPath();
+            ctx.arc(screenX, screenY - 12, size/2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw face image
+            const faceImg = faceImages.get(player.id);
+            if (faceImg) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(screenX, screenY - 12, size/2 - 2, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.clip();
+                ctx.drawImage(faceImg, screenX - size/2, screenY - 12 - size/2, size, size);
+                ctx.restore();
+            }
+
+            // Face border
+            ctx.strokeStyle = player.alive ? (isLocal ? '#44ff44' : '#4444ff') : '#ff4444';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY - 12, size/2, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Name
+            ctx.fillStyle = player.alive ? '#fff' : '#888';
+            ctx.font = 'bold 12px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText(player.name, screenX, screenY + 42);
+
+            // Dead marker
+            if (!player.alive) {
+                ctx.fillStyle = '#ff3333';
+                ctx.font = 'bold 20px Arial';
+                ctx.fillText('X', screenX, screenY - 40);
+            }
+        }
+
+        function drawMonster() {
+            const screenX = gameState.monster.x - gameState.camera.x;
+            const screenY = gameState.monster.y - gameState.camera.y;
+
+            if (screenX < -120 || screenX > canvas.width + 120 ||
+                screenY < -120 || screenY > canvas.height + 120) {
+                return;
+            }
+
+            const time = Date.now() / 100;
+            const wobble = Math.sin(time) * 3;
+            const pulse = 1 + Math.sin(time * 2) * 0.05;
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.beginPath();
+            ctx.ellipse(screenX, screenY + 35, 35, 12, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Body tendrils
+            ctx.fillStyle = '#0a0505';
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2 + time * 0.1;
+                const len = 25 + Math.sin(time + i) * 8;
+                ctx.beginPath();
+                ctx.moveTo(screenX, screenY);
+                ctx.quadraticCurveTo(
+                    screenX + Math.cos(angle) * len * 0.7,
+                    screenY + Math.sin(angle) * len * 0.7 + 20,
+                    screenX + Math.cos(angle) * len,
+                    screenY + 30 + Math.sin(angle) * len * 0.5
+                );
+                ctx.lineTo(screenX + Math.cos(angle) * (len - 5), screenY + 30 + Math.sin(angle) * len * 0.5);
+                ctx.quadraticCurveTo(
+                    screenX + Math.cos(angle) * len * 0.5,
+                    screenY + Math.sin(angle) * len * 0.5 + 15,
+                    screenX, screenY
+                );
+                ctx.fill();
+            }
+
+            // Main body
+            ctx.fillStyle = '#0a0505';
+            ctx.beginPath();
+            ctx.moveTo(screenX - 35 + wobble, screenY + 25);
+            ctx.bezierCurveTo(
+                screenX - 45, screenY - 10,
+                screenX - 30, screenY - 45,
+                screenX, screenY - 50 * pulse
+            );
+            ctx.bezierCurveTo(
+                screenX + 30, screenY - 45,
+                screenX + 45, screenY - 10,
+                screenX + 35 - wobble, screenY + 25
+            );
+            ctx.quadraticCurveTo(screenX, screenY + 40, screenX - 35 + wobble, screenY + 25);
+            ctx.fill();
+
+            // Eyes glow
+            ctx.shadowColor = '#ff0000';
+            ctx.shadowBlur = 25;
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(screenX - 12, screenY - 25, 7 + Math.sin(time * 2), 0, Math.PI * 2);
+            ctx.arc(screenX + 12, screenY - 25, 7 + Math.sin(time * 2 + 1), 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pupils
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(screenX - 12, screenY - 25, 3, 0, Math.PI * 2);
+            ctx.arc(screenX + 12, screenY - 25, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mouth
+            ctx.strokeStyle = '#330000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(screenX - 15, screenY - 5);
+            for (let i = 0; i <= 6; i++) {
+                ctx.lineTo(screenX - 15 + i * 5, screenY - 5 + (i % 2 === 0 ? -4 : 4));
+            }
+            ctx.stroke();
+        }
+
+        function drawMinimap() {
+            const mapScale = 5;
+            const mapW = CONFIG.MAZE_WIDTH * mapScale;
+            const mapH = CONFIG.MAZE_HEIGHT * mapScale;
+
+            minimapCanvas.width = mapW;
+            minimapCanvas.height = mapH;
+
+            // Maze
+            for (let y = 0; y < gameState.maze.length; y++) {
+                for (let x = 0; x < gameState.maze[0].length; x++) {
+                    minimapCtx.fillStyle = gameState.maze[y][x] === 1 ? '#2a2a3a' : '#0a0a12';
+                    minimapCtx.fillRect(x * mapScale, y * mapScale, mapScale, mapScale);
+                }
+            }
+
+            // Players
+            gameState.players.forEach((player) => {
+                if (player.alive) {
+                    const mapX = (player.x / CONFIG.CELL_SIZE) * mapScale;
+                    const mapY = (player.y / CONFIG.CELL_SIZE) * mapScale;
+
+                    const myId = gameState.isHost ? 'host' : gameState.playerId;
+                    minimapCtx.fillStyle = player.id === myId ? '#44ff44' : '#4444ff';
+                    minimapCtx.beginPath();
+                    minimapCtx.arc(mapX, mapY, 3, 0, Math.PI * 2);
+                    minimapCtx.fill();
+                }
+            });
+
+            // Monster
+            if (gameState.monster) {
+                const mapX = (gameState.monster.x / CONFIG.CELL_SIZE) * mapScale;
+                const mapY = (gameState.monster.y / CONFIG.CELL_SIZE) * mapScale;
+
+                minimapCtx.fillStyle = '#ff0000';
+                minimapCtx.beginPath();
+                minimapCtx.arc(mapX, mapY, 4, 0, Math.PI * 2);
+                minimapCtx.fill();
+            }
+        }
+
+        // ============================================
+        // UI & NETWORK UPDATES
+        // ============================================
+
+        function updateHUD() {
+            if (!gameState.startTime) return;
+
+            const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('survivalTime').textContent =
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+            const alivePlayers = Array.from(gameState.players.values()).filter(p => p.alive);
+            document.getElementById('playerCount').textContent = alivePlayers.length;
+            document.getElementById('deadCount').textContent = gameState.players.size - alivePlayers.length;
+        }
+
+        function updatePlayerList() {
+            const list = document.getElementById('playerList');
+            list.innerHTML = '<div style="font-weight: bold; margin-bottom: 8px; color: #ff6666;">Joueurs</div>';
+
+            gameState.players.forEach(player => {
+                const item = document.createElement('div');
+                item.className = 'player-item';
+                item.style.opacity = player.alive ? '1' : '0.5';
+
+                const face = document.createElement('img');
+                face.className = 'player-face';
+                if (player.faceData) {
+                    face.src = player.faceData;
+                }
+
+                const name = document.createElement('span');
+                name.textContent = (player.alive ? '' : 'X ') + player.name;
+
+                item.appendChild(face);
+                item.appendChild(name);
+                list.appendChild(item);
+            });
+        }
+
+        function sendPlayerUpdate() {
+            if (!gameState.gameStarted || !gameState.localPlayer) return;
+
+            const data = {
+                type: 'playerUpdate',
+                playerId: gameState.isHost ? 'host' : gameState.playerId,
+                x: gameState.localPlayer.x,
+                y: gameState.localPlayer.y
+            };
+
+            if (gameState.isHost) {
+                broadcast(data);
+            } else {
+                sendToHost(data);
+            }
+        }
+
+        function sendFaceUpdate() {
+            if (!gameState.gameStarted || !gameState.localPlayer || !lastFaceData) return;
+
+            gameState.localPlayer.faceData = lastFaceData;
+            loadFaceImage(gameState.isHost ? 'host' : gameState.playerId, lastFaceData);
+
+            // Send face less frequently
+            if (Math.random() < 0.3) {
+                const data = {
+                    type: 'playerUpdate',
+                    playerId: gameState.isHost ? 'host' : gameState.playerId,
+                    x: gameState.localPlayer.x,
+                    y: gameState.localPlayer.y,
+                    faceData: lastFaceData
+                };
+
+                if (gameState.isHost) {
+                    broadcast(data);
+                } else {
+                    sendToHost(data);
+                }
+            }
+        }
+
+        function sendChatMessage(message) {
+            const data = {
+                type: 'chat',
+                playerName: gameState.playerName,
+                message: message
+            };
+
+            addChatMessage(gameState.playerName, message);
+
+            if (gameState.isHost) {
+                broadcast(data);
+            } else {
+                sendToHost(data);
+            }
+        }
+
+        function addChatMessage(name, message) {
+            const messages = document.getElementById('chatMessages');
+            const msg = document.createElement('div');
+            msg.style.marginBottom = '4px';
+            msg.innerHTML = `<span style="color: #ff6666;">${name}:</span> ${message}`;
+            messages.appendChild(msg);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // ============================================
+        // AUDIO
+        // ============================================
+
+        function playSound(type) {
+            if (!audioContext) return;
+
+            try {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+
+                if (type === 'jumpscare') {
+                    osc.frequency.value = 150;
+                    osc.type = 'sawtooth';
+                    gain.gain.value = 0.3;
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                    osc.start();
+                    osc.stop(audioContext.currentTime + 0.5);
+                } else if (type === 'spawn') {
+                    osc.frequency.value = 80;
+                    osc.type = 'sine';
+                    gain.gain.value = 0.2;
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+                    osc.start();
+                    osc.stop(audioContext.currentTime + 1);
+                }
+            } catch(e) {
+                console.log('Audio error:', e);
+            }
+        }
+
+        // ============================================
+        // START
+        // ============================================
+
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
