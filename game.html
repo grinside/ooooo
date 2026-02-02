@@ -441,7 +441,8 @@
                 <li>Retrouve tes amis dans le labyrinthe</li>
                 <li>Echappe au monstre qui te traque</li>
                 <li>ZQSD ou fleches pour te deplacer</li>
-                <li>Le dernier survivant gagne !</li>
+                <li>Approche-toi pour parler aux autres !</li>
+                <li>Le son s'estompe avec la distance</li>
                 <li>Max 5 joueurs par partie</li>
             </ul>
         </div>
@@ -455,6 +456,7 @@
             <div>Survie: <span id="survivalTime">0:00</span></div>
             <div>Joueurs: <span id="playerCount">0</span>/5</div>
             <div>Elimines: <span id="deadCount">0</span></div>
+            <div id="voiceStatus" style="color: #66ff66; margin-top: 5px;"></div>
         </div>
 
         <div id="roomInfo">
@@ -510,7 +512,11 @@
             PLAYER_SPEED: 3.5,
             FACE_UPDATE_INTERVAL: 200,
             MONSTER_SPAWN_DELAY: 15000,
-            MONSTER_WARNING_DISTANCE: 250
+            MONSTER_WARNING_DISTANCE: 250,
+            // Voice chat proximity settings
+            VOICE_MIN_DISTANCE: 50,      // Distance to hear at full volume
+            VOICE_MAX_DISTANCE: 300,     // Distance where voice fades to 0
+            VOICE_ENABLED: true
         };
 
         // Game State
@@ -535,6 +541,8 @@
 
         // Media
         let videoStream = null;
+        let audioStream = null;
+        let localMediaStream = null;
         let faceCanvas = null;
         let faceCtx = null;
         let lastFaceData = null;
@@ -549,6 +557,11 @@
 
         // Audio
         let audioContext = null;
+
+        // Voice Chat - stores active audio connections and elements
+        let voiceCalls = new Map();        // peerId -> MediaConnection
+        let audioElements = new Map();     // peerId -> { element, gainNode }
+        let voiceAudioContext = null;
 
         // ============================================
         // INITIALIZATION
@@ -685,19 +698,32 @@
 
         async function enableCamera() {
             try {
-                videoStream = await navigator.mediaDevices.getUserMedia({
+                // Request both camera AND microphone
+                localMediaStream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         width: { ideal: 320 },
                         height: { ideal: 240 },
                         facingMode: 'user'
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
                     }
                 });
 
+                // Separate streams
+                videoStream = new MediaStream(localMediaStream.getVideoTracks());
+                audioStream = new MediaStream(localMediaStream.getAudioTracks());
+
                 videoElement.srcObject = videoStream;
 
-                document.getElementById('cameraStatus').textContent = 'Camera activee !';
+                // Init voice audio context
+                voiceAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+                document.getElementById('cameraStatus').textContent = 'Camera + Micro actives !';
                 document.getElementById('cameraStatus').style.color = '#66ff66';
-                document.getElementById('enableCameraBtn').textContent = 'Camera Active';
+                document.getElementById('enableCameraBtn').textContent = 'Camera & Micro OK';
                 document.getElementById('enableCameraBtn').disabled = true;
 
                 checkReadyState();
@@ -706,8 +732,29 @@
                 startFaceCapture();
 
             } catch (error) {
-                console.error('Camera error:', error);
-                document.getElementById('cameraStatus').textContent = 'Erreur: ' + error.message;
+                console.error('Camera/Mic error:', error);
+                // Try with just video if audio fails
+                try {
+                    localMediaStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 320 },
+                            height: { ideal: 240 },
+                            facingMode: 'user'
+                        }
+                    });
+                    videoStream = localMediaStream;
+                    videoElement.srcObject = videoStream;
+
+                    document.getElementById('cameraStatus').textContent = 'Camera OK (micro indisponible)';
+                    document.getElementById('cameraStatus').style.color = '#ffaa00';
+                    document.getElementById('enableCameraBtn').textContent = 'Camera Active';
+                    document.getElementById('enableCameraBtn').disabled = true;
+
+                    checkReadyState();
+                    startFaceCapture();
+                } catch (e) {
+                    document.getElementById('cameraStatus').textContent = 'Erreur: ' + error.message;
+                }
             }
         }
 
@@ -795,6 +842,15 @@
 
             peer.on('connection', handleNewConnection);
 
+            // Handle incoming voice calls
+            peer.on('call', (call) => {
+                console.log('Incoming call from:', call.peer);
+                if (localMediaStream) {
+                    call.answer(localMediaStream);
+                    handleVoiceCall(call, call.peer);
+                }
+            });
+
             peer.on('error', (err) => {
                 console.error('Peer error:', err);
                 document.getElementById('createRoomBtn').disabled = false;
@@ -836,6 +892,11 @@
                         playerName: gameState.playerName,
                         faceData: lastFaceData
                     });
+
+                    // Init voice chat with host
+                    setTimeout(() => {
+                        initVoiceChat('facemaze-' + gameState.roomId, true);
+                    }, 1000);
                 });
 
                 conn.on('data', (data) => handleData(data, 'host'));
@@ -856,6 +917,15 @@
                         returnToMenu();
                     }
                 }, 10000);
+            });
+
+            // Handle incoming voice calls
+            peer.on('call', (call) => {
+                console.log('Incoming call from:', call.peer);
+                if (localMediaStream) {
+                    call.answer(localMediaStream);
+                    handleVoiceCall(call, call.peer);
+                }
             });
 
             peer.on('error', (err) => {
@@ -914,6 +984,11 @@
 
                         // Broadcast to others
                         broadcast({ type: 'playerJoined', player: newPlayer }, fromPeer);
+
+                        // Init voice chat with new player
+                        setTimeout(() => {
+                            initVoiceChat(fromPeer, true);
+                        }, 1000);
 
                         updatePlayerList();
                         addChatMessage('Systeme', `${data.playerName} a rejoint !`);
@@ -1022,6 +1097,10 @@
                 gameState.players.delete(playerId);
                 connections.delete(playerId);
                 faceImages.delete(playerId);
+
+                // Cleanup voice call for this player
+                cleanupVoiceCall(playerId);
+
                 updatePlayerList();
 
                 if (gameState.isHost) {
@@ -1042,6 +1121,165 @@
                 faceImages.set(playerId, img);
             };
             img.src = faceData;
+        }
+
+        // ============================================
+        // VOICE CHAT - PROXIMITY AUDIO
+        // ============================================
+
+        function initVoiceChat(peerId, isInitiator = false) {
+            if (!audioStream || !CONFIG.VOICE_ENABLED) return;
+            if (voiceCalls.has(peerId)) return;
+
+            console.log('Init voice chat with:', peerId, 'initiator:', isInitiator);
+
+            if (isInitiator) {
+                // Call the other peer
+                const call = peer.call(peerId, localMediaStream);
+                if (call) {
+                    handleVoiceCall(call, peerId);
+                }
+            }
+        }
+
+        function handleVoiceCall(call, peerId) {
+            console.log('Handling voice call from:', peerId);
+            voiceCalls.set(peerId, call);
+
+            call.on('stream', (remoteStream) => {
+                console.log('Received audio stream from:', peerId);
+                setupRemoteAudio(peerId, remoteStream);
+            });
+
+            call.on('close', () => {
+                console.log('Voice call closed:', peerId);
+                cleanupVoiceCall(peerId);
+            });
+
+            call.on('error', (err) => {
+                console.error('Voice call error:', peerId, err);
+                cleanupVoiceCall(peerId);
+            });
+        }
+
+        function setupRemoteAudio(peerId, remoteStream) {
+            // Create audio element for this player
+            const audio = document.createElement('audio');
+            audio.srcObject = remoteStream;
+            audio.autoplay = true;
+
+            // Use Web Audio API for volume control
+            if (voiceAudioContext) {
+                const source = voiceAudioContext.createMediaStreamSource(remoteStream);
+                const gainNode = voiceAudioContext.createGain();
+                gainNode.gain.value = 0; // Start muted, proximity will adjust
+
+                source.connect(gainNode);
+                gainNode.connect(voiceAudioContext.destination);
+
+                audioElements.set(peerId, {
+                    element: audio,
+                    gainNode: gainNode,
+                    source: source
+                });
+            } else {
+                // Fallback: use audio element volume
+                audio.volume = 0;
+                audioElements.set(peerId, {
+                    element: audio,
+                    gainNode: null
+                });
+            }
+
+            // Add to DOM (hidden)
+            audio.style.display = 'none';
+            document.body.appendChild(audio);
+
+            // Resume audio context if needed
+            if (voiceAudioContext && voiceAudioContext.state === 'suspended') {
+                voiceAudioContext.resume();
+            }
+        }
+
+        function cleanupVoiceCall(peerId) {
+            const audioData = audioElements.get(peerId);
+            if (audioData) {
+                if (audioData.element) {
+                    audioData.element.srcObject = null;
+                    audioData.element.remove();
+                }
+                if (audioData.source) {
+                    audioData.source.disconnect();
+                }
+                if (audioData.gainNode) {
+                    audioData.gainNode.disconnect();
+                }
+                audioElements.delete(peerId);
+            }
+
+            const call = voiceCalls.get(peerId);
+            if (call) {
+                call.close();
+                voiceCalls.delete(peerId);
+            }
+        }
+
+        function updateProximityAudio() {
+            if (!gameState.localPlayer || !CONFIG.VOICE_ENABLED) return;
+
+            const myX = gameState.localPlayer.x;
+            const myY = gameState.localPlayer.y;
+            let nearbyPlayers = [];
+
+            gameState.players.forEach((player, playerId) => {
+                const myId = gameState.isHost ? 'host' : gameState.playerId;
+                if (playerId === myId) return;
+                if (!player.alive || !gameState.localPlayer.alive) return;
+
+                // Calculate distance
+                const dist = Math.hypot(player.x - myX, player.y - myY);
+
+                // Calculate volume based on distance
+                let volume = 0;
+                if (dist <= CONFIG.VOICE_MIN_DISTANCE) {
+                    volume = 1.0;
+                } else if (dist < CONFIG.VOICE_MAX_DISTANCE) {
+                    // Linear falloff
+                    volume = 1.0 - (dist - CONFIG.VOICE_MIN_DISTANCE) / (CONFIG.VOICE_MAX_DISTANCE - CONFIG.VOICE_MIN_DISTANCE);
+                    volume = Math.max(0, Math.min(1, volume));
+                }
+
+                // Apply volume
+                const audioData = audioElements.get(playerId);
+                if (audioData) {
+                    if (audioData.gainNode) {
+                        // Smooth transition
+                        audioData.gainNode.gain.setTargetAtTime(volume, voiceAudioContext.currentTime, 0.1);
+                    } else if (audioData.element) {
+                        audioData.element.volume = volume;
+                    }
+                }
+
+                // Update speaking indicator on player
+                player.speaking = volume > 0.1;
+                player.voiceVolume = volume;
+
+                if (volume > 0.1) {
+                    nearbyPlayers.push(player.name);
+                }
+            });
+
+            // Update voice status HUD
+            const voiceStatusEl = document.getElementById('voiceStatus');
+            if (voiceStatusEl) {
+                if (audioStream && nearbyPlayers.length > 0) {
+                    voiceStatusEl.textContent = 'Voix: ' + nearbyPlayers.join(', ');
+                } else if (audioStream) {
+                    voiceStatusEl.textContent = 'Micro actif';
+                } else {
+                    voiceStatusEl.textContent = '';
+                }
+            }
         }
 
         // ============================================
@@ -1257,6 +1495,9 @@
                 document.getElementById('monsterWarning').style.display =
                     dist < CONFIG.MONSTER_WARNING_DISTANCE ? 'block' : 'none';
             }
+
+            // Update proximity voice chat volumes
+            updateProximityAudio();
 
             updateHUD();
         }
@@ -1500,6 +1741,13 @@
         }
 
         function returnToMenu() {
+            // Cleanup voice calls
+            voiceCalls.forEach((call, peerId) => {
+                cleanupVoiceCall(peerId);
+            });
+            voiceCalls.clear();
+            audioElements.clear();
+
             if (peer) {
                 peer.destroy();
                 peer = null;
@@ -1678,6 +1926,21 @@
                 ctx.fillStyle = '#ff3333';
                 ctx.font = 'bold 20px Arial';
                 ctx.fillText('X', screenX, screenY - 40);
+            }
+
+            // Voice indicator (sound waves when near and speaking)
+            if (player.voiceVolume && player.voiceVolume > 0.1 && !isLocal) {
+                const waves = Math.ceil(player.voiceVolume * 3);
+                ctx.strokeStyle = `rgba(100, 255, 100, ${player.voiceVolume * 0.8})`;
+                ctx.lineWidth = 2;
+                for (let i = 1; i <= waves; i++) {
+                    const radius = size/2 + 8 + i * 6;
+                    const startAngle = -Math.PI * 0.3;
+                    const endAngle = Math.PI * 0.3;
+                    ctx.beginPath();
+                    ctx.arc(screenX, screenY - 12, radius, startAngle, endAngle);
+                    ctx.stroke();
+                }
             }
         }
 
